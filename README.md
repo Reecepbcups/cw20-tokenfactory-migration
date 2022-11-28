@@ -313,3 +313,4 @@ To do that, you will need to:
         let balance = app.wrap().query_balance(&borrower, "usdc").unwrap();
         assert_eq!(balance.amount, Uint128::new(amount));
 ```
+# cw20-tokenfactory-burn
