@@ -2,7 +2,7 @@ use cosmwasm_std::StdError;
 use thiserror::Error;
 
 #[derive(Error, Debug, PartialEq)]
-pub enum TokenFactoryError {
+pub enum ContractError {
     #[error("{0}")]
     Std(#[from] StdError),
 
@@ -23,4 +23,10 @@ pub enum TokenFactoryError {
 
     #[error("amount was zero, must be positive")]
     ZeroAmount {},
+
+    #[error("this is not an invalid cw20 message")]
+    InvalidCW20Message {},
+
+    #[error("invalid cw20 address, does not match with state.")]
+    InvalidCW20Address {},
 }

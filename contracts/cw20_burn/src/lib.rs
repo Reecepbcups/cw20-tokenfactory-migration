@@ -3,4 +3,4 @@ mod error;
 pub mod msg;
 pub mod state;
 
-pub use crate::error::TokenFactoryError;
+pub use crate::error::ContractError;

@@ -1,7 +1,7 @@
 [package]
-name = "tokenfactory"
-version = "0.8.0"
-authors = ["Roman <roman@osmosis.team>"]
+name = "cw20_burn"
+version = "0.1.0"
+authors = ["Reece <reece@notional.ventures>"]
 edition = "2018"
 
 exclude = [
@@ -43,13 +43,15 @@ optimize = """docker run --rm -v "$(pwd)":/code \
 cosmwasm-schema = "1.1"
 cosmwasm-std = "1.1"
 cosmwasm-storage = "1.1"
-cw-storage-plus = "0.15"
+cw-storage-plus = "1.0.0"
 token-bindings = { version = "0.8.0", path = "../../packages/bindings" }
-cw2 = "0.15"
+cw2 = "0.16.0"
+cw20 = "0.16.0"
 schemars = "0.8"
 serde = { version = "1.0", default-features = false, features = ["derive"] }
 thiserror = "1.0"
+getrandom = { version = "0.2", features = ["js"] }
 
 [dev-dependencies]
-cw-multi-test = "0.15"
+cw-multi-test = "0.16.1"
 token-bindings-test = { version = "0.8.0", path = "../../packages/bindings-test" }

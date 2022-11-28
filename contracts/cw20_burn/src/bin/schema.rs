@@ -1,5 +1,5 @@
 use cosmwasm_schema::write_api;
-use token_reflect::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
+use cw20_burn::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
 
 fn main() {
     write_api! {
