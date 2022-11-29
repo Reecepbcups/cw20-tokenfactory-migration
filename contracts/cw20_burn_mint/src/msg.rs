@@ -1,5 +1,5 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
-use cw20::{Cw20ReceiveMsg};
+use cw20::Cw20ReceiveMsg;
 
 #[cw_serde]
 pub struct InstantiateMsg {
@@ -11,7 +11,7 @@ pub struct InstantiateMsg {
 #[cw_serde]
 pub enum ExecuteMsg {
     Receive(Cw20ReceiveMsg),
-    TransferBackAdmin{},
+    TransferBackAdmin {},
 }
 
 #[cw_serde]
@@ -25,6 +25,6 @@ pub enum QueryMsg {
 #[cw_serde]
 pub struct GetConfig {
     pub cw20_address: String,
-    pub tf_denom: String,    
+    pub tf_denom: String,
     pub mode: String,
 }
