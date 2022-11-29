@@ -1,5 +1,5 @@
 [package]
-name = "cw20_burn"
+name = "cw20_burn_balance"
 version = "0.1.0"
 authors = ["Reece <reece@notional.ventures>"]
 edition = "2018"
