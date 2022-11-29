@@ -1,3 +1,5 @@
+# Sends tokenfactory tokens -> the contract (from another admin) to then distribute to users & burn the CW20 for
+
 KEY="juno1"
 KEY_ADDR="juno1hj5fveer5cjtn4wd6wstzugjfdxzl0xps73ftl" # test_node.sh
 CHAINID="juno-t1"
@@ -6,11 +8,9 @@ KEYALGO="secp256k1"
 KEYRING="test" # export juno_KEYRING="TEST"
 LOGLjunoL="info"
 TRACE="" # "--trace"
-
 junod config keyring-backend $KEYRING
 junod config chain-id $CHAINID
 junod config output "json"
-
 export JUNOD_NODE="http://localhost:26657"
 export JUNOD_COMMAND_ARGS="--gas 5000000 --gas-prices="0ujuno" -y --from $KEY --broadcast-mode block --output json --chain-id juno-t1"
 # junod status
@@ -20,7 +20,7 @@ junod tx tokenfactory create-denom test $JUNOD_COMMAND_ARGS
 # TOKEN_FACTORY_DENOM="factory/juno1hj5fveer5cjtn4wd6wstzugjfdxzl0xps73ftl/test"
 
 TX20=$(junod tx wasm store cw20_base.wasm $JUNOD_COMMAND_ARGS | jq -r '.txhash')
-TXBURN=$(junod tx wasm store artifacts/cw20_burn.wasm $JUNOD_COMMAND_ARGS | jq -r '.txhash')
+TXBURN=$(junod tx wasm store artifacts/cw20_burn_balance.wasm $JUNOD_COMMAND_ARGS | jq -r '.txhash')
 CW20_CODEID=1
 BURN_CODEID=2
 

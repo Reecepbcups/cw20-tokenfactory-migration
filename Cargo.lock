@@ -361,6 +361,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "cw20_burn_mint"
+version = "0.1.0"
+dependencies = [
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cosmwasm-storage",
+ "cw-multi-test 0.16.1",
+ "cw-storage-plus 1.0.0",
+ "cw2 0.16.0",
+ "cw20",
+ "getrandom 0.2.5",
+ "schemars",
+ "serde",
+ "thiserror",
+ "token-bindings",
+ "token-bindings-test",
+]
+
+[[package]]
 name = "der"
 version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"

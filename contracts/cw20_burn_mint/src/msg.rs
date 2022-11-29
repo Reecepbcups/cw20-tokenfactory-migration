@@ -4,12 +4,14 @@ use cw20::{Cw20ReceiveMsg};
 #[cw_serde]
 pub struct InstantiateMsg {
     pub cw20_address: String,
-    pub tf_denom: String,    
+    pub tf_denom: String,
+    pub admin: Option<String>,
 }
 
 #[cw_serde]
 pub enum ExecuteMsg {
     Receive(Cw20ReceiveMsg),
+    TransferBackAdmin{},
 }
 
 #[cw_serde]
