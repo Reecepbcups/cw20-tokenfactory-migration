@@ -342,7 +342,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "cw20_burn"
+name = "cw20_burn_balance"
 version = "0.1.0"
 dependencies = [
  "cosmwasm-schema",
