@@ -5,6 +5,7 @@ compile:
 
 clippy:
 	cargo clippy
+	cargo fmt
 
 test:	
 	cargo test -- --nocapture
