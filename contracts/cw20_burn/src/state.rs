@@ -8,6 +8,7 @@ use cw_storage_plus::Item;
 pub struct State {
     pub cw20_address: Addr,
     pub tf_denom: String,
+    pub contact: Option<String>,
 }
 
 pub const STATE: Item<State> = Item::new("state");

@@ -1,4 +1,4 @@
-use cosmwasm_std::StdError;
+use cosmwasm_std::{StdError, Uint128};
 use thiserror::Error;
 
 #[derive(Error, Debug, PartialEq)]
@@ -9,24 +9,16 @@ pub enum ContractError {
     #[error("Unauthorized")]
     Unauthorized {},
 
-    #[error("Invalid subdenom: {subdenom:?}")]
-    InvalidSubdenom { subdenom: String },
-
     #[error("Invalid denom: {denom:?} {message:?}")]
-    InvalidDenom { denom: String, message: String },
-
-    #[error("denom does not exist: {denom:?}")]
-    DenomDoesNotExist { denom: String },
-
-    #[error("address is not supported yet, was: {address:?}")]
-    BurnFromAddressNotSupported { address: String },
-
-    #[error("amount was zero, must be positive")]
-    ZeroAmount {},
+    InvalidDenom { denom: String, message: String },    
 
     #[error("this is not an invalid cw20 message")]
     InvalidCW20Message {},
 
     #[error("invalid cw20 address, does not match with state.")]
     InvalidCW20Address {},
+
+
+    #[error("This contract does not have enough funds to cover {request:?}. It only has {amount:?} currently.")]
+    OutOfFunds { request: Uint128, amount: Uint128 },
 }
