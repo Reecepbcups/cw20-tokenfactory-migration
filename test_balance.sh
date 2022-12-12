@@ -24,7 +24,7 @@ TXBURN=$(junod tx wasm store artifacts/cw20_burn_balance.wasm $JUNOD_COMMAND_ARG
 CW20_CODEID=1
 BURN_CODEID=2
 
-CW20_TX_INIT=$(junod tx wasm instantiate "1" '{"name": "test","symbol":"symb","decimals":6,"initial_balances":[{"address":"juno1hj5fveer5cjtn4wd6wstzugjfdxzl0xps73ftl","amount":"100"}]}' --label "juno-cw20" $JUNOD_COMMAND_ARGS -y --admin $KEY_ADDR | jq -r '.txhash') && echo $CW20_TX_INIT
+CW20_TX_INIT=$(junod tx wasm instantiate "1" '{"name": "test","symbol":"symb","decimals":6,"initial_balances":[{"address":"juno1hj5fveer5cjtn4wd6wstzugjfdxzl0xps73ftl","amount":"100"}]}' --label "juno-cw20" --admin $KEY_ADDR $JUNOD_COMMAND_ARGS -y | jq -r '.txhash') && echo $CW20_TX_INIT
 CW20_ADDR=$(junod query tx $CW20_TX_INIT --output json | jq -r '.logs[0].events[0].attributes[0].value') && echo "$CW20_ADDR"
 # export CW20_ADDR=juno14hj2tavq8fpesdwxxcu44rty3hh90vhujrvcmstl4zr3txmfvw9skjuwg8
 # junod q wasm contract-state smart $CW20_ADDR '{"balance":{"address":"juno1hj5fveer5cjtn4wd6wstzugjfdxzl0xps73ftl"}}'
@@ -52,6 +52,8 @@ function sendCw20Msg() {
 
 # junod tx wasm execute $CW20_ADDR '{"send":{"contract":"","amount":"100"}}' $JUNOD_COMMAND_ARGS
 
+# sends 5 test factory token -> the burn contract via CW20
 sendCw20Msg
 
+# Goes down by 5 since we sent 5 to the burn contract, in return it minted 5 for us :)
 junod q bank balances $BURN_ADDR

@@ -44,9 +44,9 @@ cosmwasm-schema = "1.1"
 cosmwasm-std = "1.1"
 cosmwasm-storage = "1.1"
 cw-storage-plus = "1.0.0"
-token-bindings = { version = "0.8.0", path = "../../packages/bindings" }
-cw2 = "0.16.0"
-cw20 = "0.16.0"
+token-bindings = { git = "https://github.com/CosmWasm/token-bindings" }
+cw2 = "1.0.0"
+cw20 = "1.0.0"
 schemars = "0.8"
 serde = { version = "1.0", default-features = false, features = ["derive"] }
 thiserror = "1.0"
@@ -54,4 +54,4 @@ getrandom = { version = "0.2", features = ["js"] }
 
 [dev-dependencies]
 cw-multi-test = "0.16.1"
-token-bindings-test = { version = "0.8.0", path = "../../packages/bindings-test" }
+token-bindings-test = { git = "https://github.com/CosmWasm/token-bindings" }

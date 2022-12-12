@@ -329,10 +329,23 @@ dependencies = [
 ]
 
 [[package]]
-name = "cw20"
-version = "0.16.0"
+name = "cw2"
+version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a45a8794a5dd33b66af34caee52a7beceb690856adcc1682b6e3db88b2cdee62"
+checksum = "03bdf3747540b47bc1bdaf50ba3aa5e4276ab0c2ce73e8b367ebe260cc37ff9c"
+dependencies = [
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cw-storage-plus 0.16.0",
+ "schemars",
+ "serde",
+]
+
+[[package]]
+name = "cw20"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a7a4d69a9980e2295077c08fd3f797149658f357167f5898e27c00b9465fcbde"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -350,7 +363,7 @@ dependencies = [
  "cosmwasm-storage",
  "cw-multi-test 0.16.1",
  "cw-storage-plus 1.0.0",
- "cw2 0.16.0",
+ "cw2 1.0.0",
  "cw20",
  "getrandom 0.2.5",
  "schemars",
@@ -369,7 +382,7 @@ dependencies = [
  "cosmwasm-storage",
  "cw-multi-test 0.16.1",
  "cw-storage-plus 1.0.0",
- "cw2 0.16.0",
+ "cw2 1.0.0",
  "cw20",
  "getrandom 0.2.5",
  "schemars",
@@ -889,6 +902,7 @@ dependencies = [
 [[package]]
 name = "token-bindings"
 version = "0.8.0"
+source = "git+https://github.com/CosmWasm/token-bindings#0a13213ceadb1f83a702c6b5f0a6bf8b884b3ada"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -899,6 +913,7 @@ dependencies = [
 [[package]]
 name = "token-bindings-test"
 version = "0.8.0"
+source = "git+https://github.com/CosmWasm/token-bindings#0a13213ceadb1f83a702c6b5f0a6bf8b884b3ada"
 dependencies = [
  "anyhow",
  "cosmwasm-std",
