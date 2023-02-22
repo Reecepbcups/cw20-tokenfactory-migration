@@ -97,6 +97,9 @@ function upload_cw20balance { # this does not use the middleware tokenfactory co
     TX_HASH=$($BINARY tx wasm instantiate "$BASE_CODE_ID" "$PAYLOAD" --label "cw20burnbalance" $JUNOD_COMMAND_ARGS --admin "$KEY_ADDR" | jq -r '.txhash') && echo $TX_HASH
 
     export CW20_BALANCE=$($BINARY query tx $TX_HASH --output json | jq -r '.logs[0].events[0].attributes[0].value') && echo "CW20_BALANCE: $CW20_BALANCE"
+
+    # query
+    $BINARY query wasm contract-state smart $CW20_BALANCE '{"get_config":{}}' --output json | jq .data
     
     # mint some tokenfactory tokens and send to CW20_BALANCE
     $BINARY tx tokenfactory mint 50$FULL_DENOM $JUNOD_COMMAND_ARGS
@@ -112,17 +115,16 @@ function upload_cw20balance { # this does not use the middleware tokenfactory co
 # =============
 
 start_docker
-add_accounts
 download_latest
 compile_and_copy # the compile takes time for the docker container to start up
-
+add_accounts
+# health check
 health_status
-
 # upload base contracts
 upload_cw20_base
 upload_tokenfactory_core
 
-# this programs conrtacts
+# Our contracts
 upload_cw20balance # MUST CALL THIS FIRST BEFORE WE TRANSFER THE TOKENFACTORY TOKEN TO THE MINT MODULE
 
 transfer_denom_to_middleware_contract
@@ -135,7 +137,7 @@ function sendCw20Msg() {
     AMOUNT=$2
 
     BASE64_MSG=$(echo -n "{"receive":{}}" | base64)
-    export EXECUTED_MINT_JSON=`printf '{"send":{"contract":"%s","amount":"%s","msg":"%s"}}' $CW20_BURN "$AMOUNT" $BASE64_MSG` && echo $EXECUTED_MINT_JSON
+    export EXECUTED_MINT_JSON=`printf '{"send":{"contract":"%s","amount":"%s","msg":"%s"}}' $THIS_CONTRACT "$AMOUNT" $BASE64_MSG` && echo $EXECUTED_MINT_JSON
 
     # Base cw20 contract
     TX=$($BINARY tx wasm execute "$CW20_ADDR" "$EXECUTED_MINT_JSON" $JUNOD_COMMAND_ARGS | jq -r '.txhash') && echo $TX
@@ -150,6 +152,9 @@ function test_mint_contract {
     sendCw20Msg $CW20_BURN "5"
     # should not be 5
     $BINARY q bank balances $KEY_ADDR --denom $FULL_DENOM --output json | jq -r .amount
+
+    # 0 since this does not hold balance
+    $BINARY q bank balances $CW20_BURN --denom $FULL_DENOM --output json | jq -r .amount
 }
 
 function test_balance_contract {
