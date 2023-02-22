@@ -1,11 +1,11 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult, WasmMsg,
+    to_binary, Binary, Coin, Deps, DepsMut, Env, MessageInfo, Response, StdResult, WasmMsg,
 };
 use cw2::set_contract_version;
 use cw20::Cw20ReceiveMsg;
-use token_bindings::{TokenFactoryMsg, TokenMsg};
+use tokenfactory_types::msg::ExecuteMsg::Mint;
 
 use crate::error::ContractError;
 use crate::msg::{ExecuteMsg, GetConfig, InstantiateMsg, QueryMsg};
@@ -19,13 +19,16 @@ const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 pub fn instantiate(
     deps: DepsMut,
     _env: Env,
-    info: MessageInfo,
+    _info: MessageInfo,
     msg: InstantiateMsg,
 ) -> Result<Response, ContractError> {
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
     let tf_denom = msg.tf_denom;
-    let cw20_address = deps.api.addr_validate(&msg.cw20_address)?;
+
+    let cw20_token_address = deps.api.addr_validate(&msg.cw20_token_address)?;
+
+    let contract_minter_address = deps.api.addr_validate(&msg.contract_minter_address)?;
 
     if !tf_denom.starts_with("factory/") {
         return Err(ContractError::InvalidDenom {
@@ -35,11 +38,9 @@ pub fn instantiate(
     }
 
     let state = State {
-        cw20_address,
+        contract_minter_address,
+        cw20_token_address: cw20_token_address.to_string(),
         tf_denom,
-        prev_admin: deps
-            .api
-            .addr_validate(&msg.admin.unwrap_or_else(|| info.sender.to_string()))?,
     };
     STATE.save(deps.storage, &state)?;
 
@@ -52,48 +53,37 @@ pub fn execute(
     _env: Env,
     info: MessageInfo,
     msg: ExecuteMsg,
-) -> Result<Response<TokenFactoryMsg>, ContractError> {
+) -> Result<Response, ContractError> {
     match msg {
         ExecuteMsg::Receive(cw20_msg) => execute_redeem_mint(deps, info, cw20_msg),
-        ExecuteMsg::TransferBackAdmin {} => execute_transfer_back_admin(deps, info),
     }
-}
-
-pub fn execute_transfer_back_admin(
-    deps: DepsMut,
-    info: MessageInfo,
-) -> Result<Response<TokenFactoryMsg>, ContractError> {
-    let state = STATE.load(deps.storage)?;
-    if info.sender != state.prev_admin {
-        return Err(ContractError::Unauthorized {});
-    }
-
-    let msg = TokenMsg::ChangeAdmin {
-        denom: state.tf_denom,
-        new_admin_address: state.prev_admin.to_string(),
-    };
-
-    Ok(Response::new()
-        .add_attribute("method", "transfer_back_admin")
-        .add_attribute("new_admin", info.sender)
-        .add_message(msg))
 }
 
 pub fn execute_redeem_mint(
     deps: DepsMut,
     info: MessageInfo,
     cw20_msg: Cw20ReceiveMsg,
-) -> Result<Response<TokenFactoryMsg>, ContractError> {
+) -> Result<Response, ContractError> {
     let cw20_contract = info.sender.to_string();
     let state = STATE.load(deps.storage)?;
 
-    if cw20_contract != state.cw20_address {
+    if cw20_contract != state.cw20_token_address {
         return Err(ContractError::InvalidCW20Address {});
     }
 
-    // Mint the tokens to their account
-    let mint_tokens_msg =
-        TokenMsg::mint_contract_tokens(state.tf_denom, cw20_msg.amount, cw20_msg.sender.clone());
+    let mint_payload = Mint {
+        address: cw20_msg.sender.clone(),
+        denom: vec![Coin {
+            denom: state.tf_denom,
+            amount: cw20_msg.amount,
+        }],
+    };
+
+    let wasm_mint_msg = WasmMsg::Execute {
+        contract_addr: state.contract_minter_address.to_string(),
+        msg: to_binary(&mint_payload)?,
+        funds: vec![],
+    };
 
     // Burn the CW20 since it is in our possession now
     let cw20_burn = cw20::Cw20ExecuteMsg::Burn {
@@ -108,7 +98,7 @@ pub fn execute_redeem_mint(
     Ok(Response::new()
         .add_attribute("method", "redeem_mint")
         .add_message(cw20_burn_msg)
-        .add_message(mint_tokens_msg))
+        .add_message(wasm_mint_msg))
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
@@ -117,12 +107,10 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
         QueryMsg::GetConfig {} => {
             let state = STATE.load(deps.storage)?;
             to_binary(&GetConfig {
-                cw20_address: state.cw20_address.into_string(),
+                contract_minter_address: state.contract_minter_address.to_string(),
+                cw20_token_address: state.cw20_token_address,
                 tf_denom: state.tf_denom,
-                mode: "mint".to_string(),
             })
         }
     }
 }
-
-// TODO: test cw20 -> native denom

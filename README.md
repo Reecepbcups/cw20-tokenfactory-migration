@@ -1,4 +1,4 @@
-# cw20-to-tokenfactory
+# CW20 to tokenfactory migration contracts
 
 Deposit/Send in an old CW20 token and receive the new token-factory native token :D
 
@@ -14,13 +14,11 @@ Steps:
 
 ## cw20_burn_mint
 
-This contract is the minter admin of the contract
-
-TODO: make it possible for the old admin to be able to remove the admin from said contract -> wherever they want.
+This contract mints a token from the [core-contract](https://github.com/Reecepbcups/tokenfactory-core-contract) and in return burns the CW20 asset for the user. 
 
 Begin:
 
-- Set the contract as the minter / admin of the token factory denom
+- Initialize the core-contract
 - The user sends their CW20 to this contract. In turn, it will burn the CW20 and mint/give you the new token-factory native token
 
 ## Finally

@@ -388,8 +388,8 @@ dependencies = [
  "schemars",
  "serde",
  "thiserror",
- "token-bindings",
  "token-bindings-test",
+ "tokenfactory-types",
 ]
 
 [[package]]
@@ -924,6 +924,17 @@ dependencies = [
  "serde",
  "thiserror",
  "token-bindings",
+]
+
+[[package]]
+name = "tokenfactory-types"
+version = "0.0.1"
+source = "git+https://github.com/Reecepbcups/tokenfactory-core-contract#daaae77457739b01bba2e2f6ea1e1cfe68da51a1"
+dependencies = [
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "schemars",
+ "serde",
 ]
 
 [[package]]
