@@ -1,8 +1,19 @@
-# CW20 to tokenfactory migration contracts
+# CW20 Migrations to TokenFactory
 
 Deposit/Send in an old CW20 token and receive the new token-factory native token :D
 
-## cw20_burn_balance
+Modes: Mint from [Core Middlware Contract](https://github.com/Reecepbcups/tokenfactory-core-contract) or send from this contract's bank balance
+
+## Mint
+
+
+
+
+## Balance
+
+
+
+---
 
 This contract will accept token-factory denominations from a user (ex: admin of the denom) and allow for liquid tokens to convert via balances.
 
@@ -14,7 +25,7 @@ Steps:
 
 ## cw20_burn_mint
 
-This contract mints a token from the [core-contract](https://github.com/Reecepbcups/tokenfactory-core-contract) and in return burns the CW20 asset for the user. 
+This contract mints a token from the  and in return burns the CW20 asset for the user. 
 
 Begin:
 

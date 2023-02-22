@@ -28,7 +28,7 @@ function create_denom {
     export FULL_DENOM="factory/$KEY_ADDR/$RANDOM_STRING" && echo $FULL_DENOM
 }
 
-function transfer_denom_to_contract {
+function transfer_denom_to_middleware_contract {
     # transfer admin to the contract from the user (this way the contract can mint factory denoms)
     $BINARY tx tokenfactory change-admin $FULL_DENOM $TF_CONTRACT $JUNOD_COMMAND_ARGS
     $BINARY q tokenfactory denom-authority-metadata $FULL_DENOM # admin is the TF_CONTRACT
@@ -51,8 +51,6 @@ function upload_cw20_base {
 }
 
 function upload_tokenfactory_core {
-    
-
     echo "Storing contract..."
     create_denom
     UPLOAD=$($BINARY tx wasm store /tokenfactory_core.wasm $JUNOD_COMMAND_ARGS | jq -r '.txhash') && echo $UPLOAD
@@ -65,15 +63,17 @@ function upload_tokenfactory_core {
 
     export TF_CONTRACT=$($BINARY query tx $TX_HASH --output json | jq -r '.logs[0].events[0].attributes[0].value') && echo "TF_CONTRACT: $TF_CONTRACT"
 
-    transfer_denom_to_contract
+    
 }
 
-function upload_cw20burnmint { # must run after uploading the tokenfactory core
+function upload_cw20mint { # must run after uploading the tokenfactory core
     echo "Storing contract..."
     # its from the root of the docker container
-    UPLOAD=$($BINARY tx wasm store /cw20_burn_mint.wasm $JUNOD_COMMAND_ARGS | jq -r '.txhash') && echo $UPLOAD
+    UPLOAD=$($BINARY tx wasm store /cw20_migrate.wasm $JUNOD_COMMAND_ARGS | jq -r '.txhash') && echo $UPLOAD
     BASE_CODE_ID=$($BINARY q tx $UPLOAD --output json | jq -r '.logs[0].events[] | select(.type == "store_code").attributes[] | select(.key == "code_id").value') && echo "Code Id: $BASE_CODE_ID"
-    PAYLOAD=$(printf '{"cw20_token_address":"%s","contract_minter_address":"%s","tf_denom":"%s"}' $CW20_ADDR $TF_CONTRACT $FULL_DENOM) && echo $PAYLOAD
+
+    # mode: balance or mint. If mint, contract_minter_address is required
+    PAYLOAD=$(printf '{"mode":"mint","cw20_token_address":"%s","contract_minter_address":"%s","tf_denom":"%s"}' $CW20_ADDR $TF_CONTRACT $FULL_DENOM) && echo $PAYLOAD
     TX_HASH=$($BINARY tx wasm instantiate "$BASE_CODE_ID" "$PAYLOAD" --label "cw20burnmint" $JUNOD_COMMAND_ARGS --admin "$KEY_ADDR" | jq -r '.txhash') && echo $TX_HASH
 
     export CW20_BURN=$($BINARY query tx $TX_HASH --output json | jq -r '.logs[0].events[0].attributes[0].value') && echo "CW20_BURN: $CW20_BURN"
@@ -85,6 +85,24 @@ function upload_cw20burnmint { # must run after uploading the tokenfactory core
     # query the contract to see if it was added    
     $BINARY query wasm contract-state smart $TF_CONTRACT '{"get_config":{}}' --output json | jq .data.allowed_mint_addresses
     # the cw20burnmint address can now mint tokens from the TF_CONTRACT
+}
+function upload_cw20balance { # this does not use the middleware tokenfactory core. Just takes 
+    echo "Storing contract..."
+    # its from the root of the docker container
+    UPLOAD=$($BINARY tx wasm store /cw20_migrate.wasm $JUNOD_COMMAND_ARGS | jq -r '.txhash') && echo $UPLOAD
+    BASE_CODE_ID=$($BINARY q tx $UPLOAD --output json | jq -r '.logs[0].events[] | select(.type == "store_code").attributes[] | select(.key == "code_id").value') && echo "Code Id: $BASE_CODE_ID"
+
+    # mode: balance or mint.
+    PAYLOAD=$(printf '{"mode":"balance","cw20_token_address":"%s","tf_denom":"%s"}' $CW20_ADDR $FULL_DENOM) && echo $PAYLOAD
+    TX_HASH=$($BINARY tx wasm instantiate "$BASE_CODE_ID" "$PAYLOAD" --label "cw20burnbalance" $JUNOD_COMMAND_ARGS --admin "$KEY_ADDR" | jq -r '.txhash') && echo $TX_HASH
+
+    export CW20_BALANCE=$($BINARY query tx $TX_HASH --output json | jq -r '.logs[0].events[0].attributes[0].value') && echo "CW20_BALANCE: $CW20_BALANCE"
+    
+    # mint some tokenfactory tokens and send to CW20_BALANCE
+    $BINARY tx tokenfactory mint 50$FULL_DENOM $JUNOD_COMMAND_ARGS
+    $BINARY tx bank send $KEY_ADDR $CW20_BALANCE 50$FULL_DENOM $JUNOD_COMMAND_ARGS
+    # check CW20_BALANCE (50)
+    $BINARY q bank balances $CW20_BALANCE --output json | jq .balances
 }
 
 # === COPY ALL ABOVE TO SET ENVIROMENT UP LOCALLY ====
@@ -98,35 +116,56 @@ add_accounts
 download_latest
 compile_and_copy # the compile takes time for the docker container to start up
 
-sleep 2
 health_status
-
 
 # upload base contracts
 upload_cw20_base
 upload_tokenfactory_core
 
 # this programs conrtacts
-upload_cw20burnmint
+upload_cw20balance # MUST CALL THIS FIRST BEFORE WE TRANSFER THE TOKENFACTORY TOKEN TO THE MINT MODULE
+
+transfer_denom_to_middleware_contract
+upload_cw20mint
 
 
 # we are going to send some balance from the CW20 to the cw20burnmint address and ensure they get the tokens in return
 function sendCw20Msg() {
+    THIS_CONTRACT=$1
+    AMOUNT=$2
+
     BASE64_MSG=$(echo -n "{"receive":{}}" | base64)
-    export EXECUTED_MINT_JSON=`printf '{"send":{"contract":"%s","amount":"%s","msg":"%s"}}' $CW20_BURN "5" $BASE64_MSG` && echo $EXECUTED_MINT_JSON
+    export EXECUTED_MINT_JSON=`printf '{"send":{"contract":"%s","amount":"%s","msg":"%s"}}' $CW20_BURN "$AMOUNT" $BASE64_MSG` && echo $EXECUTED_MINT_JSON
 
     # Base cw20 contract
     TX=$($BINARY tx wasm execute "$CW20_ADDR" "$EXECUTED_MINT_JSON" $JUNOD_COMMAND_ARGS | jq -r '.txhash') && echo $TX
     # junod tx wasm execute "$CW20_ADDR" `printf '{"send":{"contract":"%s","amount":"5","msg":"e3JlZGVlbTp7fX0="}}' $BURN_ADDR` $JUNOD_COMMAND_ARGS
 }
 
-# get balance of the $KEY_ADDR
-# 0 initially
-$BINARY q bank balances $KEY_ADDR --denom $FULL_DENOM --output json | jq -r .amount
-# send 5 via the cw20 abse contract
-sendCw20Msg
-# should not be 5
-$BINARY q bank balances $KEY_ADDR --denom $FULL_DENOM --output json | jq -r .amount
+function test_mint_contract {
+    # get balance of the $KEY_ADDR
+    # 0 initially
+    $BINARY q bank balances $KEY_ADDR --denom $FULL_DENOM --output json | jq -r .amount
+    # send 5 via the cw20 abse contract
+    sendCw20Msg $CW20_BURN "5"
+    # should not be 5
+    $BINARY q bank balances $KEY_ADDR --denom $FULL_DENOM --output json | jq -r .amount
+}
+
+function test_balance_contract {
+    # should be 5
+    $BINARY q bank balances $KEY_ADDR --denom $FULL_DENOM --output json | jq -r .amount
+
+    sendCw20Msg $CW20_BALANCE "2"
+
+    # should be 7    
+    $BINARY q bank balances $KEY_ADDR --denom $FULL_DENOM --output json | jq -r .amount
+
+    # ensure the balance of the cw20_balance contract went down 2
+    $BINARY q bank balances $CW20_BALANCE --denom $FULL_DENOM --output json | jq -r .amount
+}
+
+
 
 
 # then you can continue to use your TF_CONTRACT for other applications :D
