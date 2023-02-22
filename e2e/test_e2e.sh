@@ -28,24 +28,20 @@ function create_denom {
     export FULL_DENOM="factory/$KEY_ADDR/$RANDOM_STRING" && echo $FULL_DENOM
 }
 
+function transfer_denom_to_contract {
+    # transfer admin to the contract from the user (this way the contract can mint factory denoms)
+    $BINARY tx tokenfactory change-admin $FULL_DENOM $TF_CONTRACT $JUNOD_COMMAND_ARGS
+    $BINARY q tokenfactory denom-authority-metadata $FULL_DENOM # admin is the TF_CONTRACT
+}
+
+function download_latest {
+    # download latest core contract from public repo, gets uploaded to the docker container
+    wget -O e2e/tokenfactory_core.wasm "$MAIN_REPO_RAW_ARTIFACTS/tokenfactory_core.wasm"
+}
+
 # ========================
 # === Contract Uploads ===
 # ========================
-# function upload_testing_contract {    
-
-#     echo "Storing contract..."
-#     UPLOAD=$($BINARY tx wasm store /tf_example.wasm $JUNOD_COMMAND_ARGS | jq -r '.txhash') && echo $UPLOAD
-#     BASE_CODE_ID=$($BINARY q tx $UPLOAD --output json | jq -r '.logs[0].events[] | select(.type == "store_code").attributes[] | select(.key == "code_id").value') && echo "Code Id: $BASE_CODE_ID"
-
-#     # == INSTANTIATE ==
-#     # PAYLOAD=$(printf '{"core_factory_address":"%s"}' $TF_CONTRACT) && echo $PAYLOAD
-#     PAYLOAD=$(printf '{}' $TF_CONTRACT) && echo $PAYLOAD
-#     TX_HASH=$($BINARY tx wasm instantiate "$BASE_CODE_ID" "$PAYLOAD" --label "tf_test" $JUNOD_COMMAND_ARGS --admin "$KEY_ADDR" | jq -r '.txhash') && echo $TX_HASH
-
-
-#     export TEST_CONTRACT=$($BINARY query tx $TX_HASH --output json | jq -r '.logs[0].events[0].attributes[0].value') && echo "TEST_CONTRACT: $TEST_CONTRACT"
-# }
-
 function upload_cw20_base {
     UPLOAD=$($BINARY tx wasm store /cw20_base.wasm $JUNOD_COMMAND_ARGS | jq -r '.txhash') && echo $UPLOAD
     BASE_CODE_ID=$($BINARY q tx $UPLOAD --output json | jq -r '.logs[0].events[] | select(.type == "store_code").attributes[] | select(.key == "code_id").value') && echo "Code Id: $BASE_CODE_ID"
@@ -54,17 +50,8 @@ function upload_cw20_base {
     export CW20_ADDR=$($BINARY query tx $CW20_TX_INIT --output json | jq -r '.logs[0].events[0].attributes[0].value') && echo "$CW20_ADDR"
 }
 
-
-
-function transfer_denom_to_contract {
-    # transfer admin to the contract from the user
-    $BINARY tx tokenfactory change-admin $FULL_DENOM $TF_CONTRACT $JUNOD_COMMAND_ARGS
-    $BINARY q tokenfactory denom-authority-metadata $FULL_DENOM # admin is the TF_CONTRACT
-}
-
 function upload_tokenfactory_core {
-    # download latest core contract from public repo
-    wget -O e2e/tokenfactory_core.wasm "$MAIN_REPO_RAW_ARTIFACTS/tokenfactory_core.wasm"
+    
 
     echo "Storing contract..."
     create_denom
@@ -108,9 +95,10 @@ function upload_cw20burnmint { # must run after uploading the tokenfactory core
 
 start_docker
 add_accounts
+download_latest
 compile_and_copy # the compile takes time for the docker container to start up
 
-sleep 5
+sleep 2
 health_status
 
 
@@ -135,8 +123,8 @@ function sendCw20Msg() {
 # get balance of the $KEY_ADDR
 # 0 initially
 $BINARY q bank balances $KEY_ADDR --denom $FULL_DENOM --output json | jq -r .amount
+# send 5 via the cw20 abse contract
 sendCw20Msg
-
 # should not be 5
 $BINARY q bank balances $KEY_ADDR --denom $FULL_DENOM --output json | jq -r .amount
 
