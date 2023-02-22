@@ -49,7 +49,6 @@ function upload_cw20_base {
     CW20_TX_INIT=$($BINARY tx wasm instantiate "$BASE_CODE_ID" '{"name":"test","symbol":"aaaa","decimals":6,"initial_balances":[{"address":"juno1hj5fveer5cjtn4wd6wstzugjfdxzl0xps73ftl","amount":"100"}]}' --label "juno-cw20" $JUNOD_COMMAND_ARGS -y --admin $KEY_ADDR | jq -r '.txhash') && echo $CW20_TX_INIT
     export CW20_ADDR=$($BINARY query tx $CW20_TX_INIT --output json | jq -r '.logs[0].events[0].attributes[0].value') && echo "$CW20_ADDR"
 }
-
 function upload_tokenfactory_core {
     echo "Storing contract..."
     create_denom
@@ -61,9 +60,7 @@ function upload_tokenfactory_core {
     PAYLOAD=$(printf '{"allowed_mint_addresses":[],"denoms":["%s"]}' $FULL_DENOM) && echo $PAYLOAD
     TX_HASH=$($BINARY tx wasm instantiate "$BASE_CODE_ID" "$PAYLOAD" --label "tf-middlware" $JUNOD_COMMAND_ARGS --admin "$KEY_ADDR" | jq -r '.txhash') && echo $TX_HASH
 
-    export TF_CONTRACT=$($BINARY query tx $TX_HASH --output json | jq -r '.logs[0].events[0].attributes[0].value') && echo "TF_CONTRACT: $TF_CONTRACT"
-
-    
+    export TF_CONTRACT=$($BINARY query tx $TX_HASH --output json | jq -r '.logs[0].events[0].attributes[0].value') && echo "TF_CONTRACT: $TF_CONTRACT"    
 }
 
 function upload_cw20mint { # must run after uploading the tokenfactory core
@@ -83,7 +80,9 @@ function upload_cw20mint { # must run after uploading the tokenfactory core
     TX_HASH=$($BINARY tx wasm execute "$TF_CONTRACT" "$PAYLOAD" $JUNOD_COMMAND_ARGS | jq -r '.txhash') && echo $TX_HASH
 
     # query the contract to see if it was added    
-    $BINARY query wasm contract-state smart $TF_CONTRACT '{"get_config":{}}' --output json | jq .data.allowed_mint_addresses
+    v=$($BINARY query wasm contract-state smart $TF_CONTRACT '{"get_config":{}}' --output json | jq .data) && echo $v
+    ASSERT_EQUAL "$(echo $v | jq -r .allowed_mint_addresses[0])" "$CW20_BURN"
+    ASSERT_EQUAL "$(echo $v | jq -r .denoms[0])" "$FULL_DENOM"
     # the cw20burnmint address can now mint tokens from the TF_CONTRACT
 }
 function upload_cw20balance { # this does not use the middleware tokenfactory core. Just takes 
@@ -99,13 +98,18 @@ function upload_cw20balance { # this does not use the middleware tokenfactory co
     export CW20_BALANCE=$($BINARY query tx $TX_HASH --output json | jq -r '.logs[0].events[0].attributes[0].value') && echo "CW20_BALANCE: $CW20_BALANCE"
 
     # query
-    $BINARY query wasm contract-state smart $CW20_BALANCE '{"get_config":{}}' --output json | jq .data
+    v=$($BINARY query wasm contract-state smart $CW20_BALANCE '{"get_config":{}}' --output json | jq -r .data) && echo $v
+    ASSERT_EQUAL "$(echo $v | jq -r .mode)" "balance"
     
+    TOKENS_AMOUNT=50
+
     # mint some tokenfactory tokens and send to CW20_BALANCE
-    $BINARY tx tokenfactory mint 50$FULL_DENOM $JUNOD_COMMAND_ARGS
-    $BINARY tx bank send $KEY_ADDR $CW20_BALANCE 50$FULL_DENOM $JUNOD_COMMAND_ARGS
+    $BINARY tx tokenfactory mint $TOKENS_AMOUNT$FULL_DENOM $JUNOD_COMMAND_ARGS
+    $BINARY tx bank send $KEY_ADDR $CW20_BALANCE $TOKENS_AMOUNT$FULL_DENOM $JUNOD_COMMAND_ARGS
+
     # check CW20_BALANCE (50)
-    $BINARY q bank balances $CW20_BALANCE --output json | jq .balances
+    v=$($BINARY q bank balances $CW20_BALANCE --output json | jq -r .balances) && echo $v
+    ASSERT_EQUAL "$(echo $v | jq -r .[0].amount)" "$TOKENS_AMOUNT"
 }
 
 # === COPY ALL ABOVE TO SET ENVIROMENT UP LOCALLY ====
@@ -147,30 +151,40 @@ function sendCw20Msg() {
 function test_mint_contract {
     # get balance of the $KEY_ADDR
     # 0 initially
-    $BINARY q bank balances $KEY_ADDR --denom $FULL_DENOM --output json | jq -r .amount
-    # send 5 via the cw20 abse contract
+    v=$($BINARY q bank balances $KEY_ADDR --denom $FULL_DENOM --output json | jq -r .amount) && echo $v
+    ASSERT_EQUAL "$v" "0"
+
+    # send 5 via the cw20base contract
     sendCw20Msg $CW20_BURN "5"
-    # should not be 5
-    $BINARY q bank balances $KEY_ADDR --denom $FULL_DENOM --output json | jq -r .amount
+
+    # should now be 5
+    v=$($BINARY q bank balances $KEY_ADDR --denom $FULL_DENOM --output json | jq -r .amount) && echo $v
+    ASSERT_EQUAL "$v" "5"
 
     # 0 since this does not hold balance
-    $BINARY q bank balances $CW20_BURN --denom $FULL_DENOM --output json | jq -r .amount
+    v=$($BINARY q bank balances $CW20_BURN --denom $FULL_DENOM --output json | jq -r .amount) && echo $v
+    ASSERT_EQUAL "$v" "0"
 }
 
 function test_balance_contract {
     # should be 5
-    $BINARY q bank balances $KEY_ADDR --denom $FULL_DENOM --output json | jq -r .amount
+    v=$($BINARY q bank balances $KEY_ADDR --denom $FULL_DENOM --output json | jq -r .amount) && echo $v
+    ASSERT_EQUAL "$v" "5"
 
     sendCw20Msg $CW20_BALANCE "2"
 
     # should be 7    
-    $BINARY q bank balances $KEY_ADDR --denom $FULL_DENOM --output json | jq -r .amount
+    v=$($BINARY q bank balances $KEY_ADDR --denom $FULL_DENOM --output json | jq -r .amount) && echo $v
+    ASSERT_EQUAL "$v" "7"
 
     # ensure the balance of the cw20_balance contract went down 2
-    $BINARY q bank balances $CW20_BALANCE --denom $FULL_DENOM --output json | jq -r .amount
+    v=$($BINARY q bank balances $CW20_BALANCE --denom $FULL_DENOM --output json | jq -r .amount) && echo $v
+    ASSERT_EQUAL "$v" "$(( $TOKENS_AMOUNT - 2 ))"
 }
 
 
+test_mint_contract
+test_balance_contract
 
-
+exit $FINAL_STATUS_CODE # from helpers.sh
 # then you can continue to use your TF_CONTRACT for other applications :D
