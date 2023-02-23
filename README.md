@@ -2,45 +2,72 @@
 
 Deposit/Send in an old CW20 token and receive the new token-factory native token :D
 
-Modes: Mint from [Core Middlware Contract](https://github.com/Reecepbcups/tokenfactory-core-contract) or send from this contract's bank balance
+Modes: Mint  or send from this contract's bank balance
 
-## Mint
+## Mode: mint
 
+This mode requires the [Core middleware Contract](https://github.com/Reecepbcups/tokenfactory-core-contract). It allows for multiple contracts to mint for a single native token-factory denomination. Once this contract is initialized and the admin token set to the middleware, you are then ready to get this contract set up.
 
+Steps to enable mint mode:
 
+- Initialize the core-middleware & token factory denom *(above link has a guide)*
+- Initialize this migration contract with the following message
 
-## Balance
+```json
+// Example: e2e/test_e2e.sh upload_cw20mint
+{
+    "mode":"mint",
+    "cw20_token_address":"juno1MyCW20ContractTokenAddress",
+    "contract_minter_address":"juno1CoreMiddlewareContractAddress",
+    "tf_denom":"factory/juno1.../token"
+}
+```
 
+- On the core-middleware contract, add this address to the minter whitelist
 
+```json
+// Core middleware contract
+{
+    "add_whitelist":{"addresses":["juno1MigrateContractAddress"]}
+}
+```
 
----
+Your contract is now ready for users to deposit a CW20, and in return, the Middleware contract will mint the new token-factory native token for them!
 
-This contract will accept token-factory denominations from a user (ex: admin of the denom) and allow for liquid tokens to convert via balances.
+## Mode: balance
 
+In this mode, the contract does not require the core middleware contract. It will simply send the native token-factory denom from the contract's bank balance to the user. This could mean the contract runs out of funds. 
 
-Steps:
-- send some of the native tokens to this address
-- Launch a frontend to interact with said contract (see test_balance.sh `sendCw20Msg` for example on how it works)
-- The user sends their CW20 to this contract. In turn, it will burn the CW20 and mint/give you the new token-factory native token
+Steps to enable balance mode:
 
-## cw20_burn_mint
+- Initialize this migration contract with the following message
 
-This contract mints a token from the  and in return burns the CW20 asset for the user. 
+```json
+// Example: e2e/test_e2e.sh upload_cw20balance
+{
+    "mode":"balance",
+    "cw20_token_address":"juno1MyCW20ContractTokenAddress",    
+    "tf_denom":"factory/juno1.../token"
+}
+```
 
-Begin:
+- Send token-factory funds to this newly created contract address
 
-- Initialize the core-contract
-- The user sends their CW20 to this contract. In turn, it will burn the CW20 and mint/give you the new token-factory native token
+```sh
+# mint tokens to the admin account via the CLI
+junod tx tokenfactory mint 1000factory/juno1...addr.../abcde $FLAGS
 
-## Finally
+# send those tokens to the balance migration contract
+junod tx bank send [key] <$CW20_BALANCE_CONTRACT> 1000factory/juno1...addr.../abcde $FLAGS
 
-- You can now use the new token-factory native token as you wish
+# NOTE: You could have a whitelisted member of the core TF middleware mint tokens to this address from another contract / user if you so choose.
+```
 
 ---
 
 ## Other Ideas
 
-Will work on these after Juno v12 testnet launch
+Will work on these after Juno v13 launch
 
 <https://hackmd.io/@reecepbcups/cw20-to-tokenfactory>
 
@@ -49,4 +76,4 @@ Will work on these after Juno v12 testnet launch
 
 - IBC convert denoms, send to null address? since bank doesn't have burn
 
-- DAODAO native converts with VoteModule / CW20 wrappers
+- DAODAO native converts with VoteModule / CW20 wrappers (on usage of the token in DAODAO, it burns the CW20 and gives the user the native)
