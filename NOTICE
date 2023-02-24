@@ -1,5 +1,5 @@
-Osmosis Bindings: CosmWasm bindings to custom Osmosis features
-Copyright 2022 Confio GmbH
+CW20 Migration: Migrate away from those CW20s to native tokens
+Copyright 2023 Reece Williams
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
