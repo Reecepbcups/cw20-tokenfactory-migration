@@ -1,3 +1,7 @@
+# REPO MOVED TO
+<https://github.com/CosmosContracts/tokenfactory-contracts>
+
+
 # CW20 Migrations to TokenFactory
 
 Deposit/Send in an old CW20 token and receive the new token-factory native token :D
